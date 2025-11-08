@@ -1,1 +1,18 @@
-{"image":"mcr.microsoft.com/devcontainers/universal:2"}
+{
+	"name": "coralnpu-dev",
+	"build": {
+		"dockerfile": "Dockerfile"
+	},
+	"customizations": {
+		"vscode": {
+			"settings": {
+				"terminal.integrated.defaultProfile.linux": "bash"
+			},
+			"extensions": [
+				"ms-vscode.cpptools",
+				"ms-python.python"
+			]
+		}
+	},
+	"postCreateCommand": "bash -lc 'echo Dev container ready'"
+}

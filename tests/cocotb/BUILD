@@ -43,6 +43,8 @@ verilator_cocotb_model(
     name = "core_mini_axi_model",
     cflags = VERILATOR_BUILD_ARGS,
     hdl_toplevel = "CoreMiniAxi",
+    trace = True,
+    threads = 4,
     verilog_source = "//hdl/chisel/src/coralnpu:CoreMiniAxi.sv",
 )
 
@@ -50,6 +52,8 @@ verilator_cocotb_model(
     name = "core_mini_debug_axi_model",
     cflags = VERILATOR_BUILD_ARGS,
     hdl_toplevel = "CoreMiniDebugAxi",
+    trace = True,
+    threads = 4,
     verilog_source = "//hdl/chisel/src/coralnpu:CoreMiniDebugAxi.sv",
 )
 
@@ -57,6 +61,8 @@ verilator_cocotb_model(
     name = "rvv_core_mini_axi_model",
     cflags = VERILATOR_BUILD_ARGS,
     hdl_toplevel = "RvvCoreMiniAxi",
+    trace = True,
+    threads = 4,
     verilog_source = "//hdl/chisel/src/coralnpu:RvvCoreMiniAxi.sv",
 )
 
@@ -64,6 +70,8 @@ verilator_cocotb_model(
     name = "rvv_core_mini_highmem_axi_model",
     cflags = VERILATOR_BUILD_ARGS,
     hdl_toplevel = "RvvCoreMiniHighmemAxi",
+    trace = True,
+    threads = 4,
     verilog_source = "//hdl/chisel/src/coralnpu:RvvCoreMiniHighmemAxi.sv",
 )
 

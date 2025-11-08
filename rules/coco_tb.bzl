@@ -18,6 +18,57 @@ load("@coralnpu_hw//third_party/python:requirements.bzl", "requirement")
 load("@rules_hdl//cocotb:cocotb.bzl", "cocotb_test")
 load("@rules_python//python:defs.bzl", "py_library")
 
+def _parse_positive_int(s):
+    """Parse a positive integer from string-like input, or return None.
+
+    Starlark has no try/except; validate characters before int().
+    """
+    if s == None:
+        return None
+    ss = str(s).strip()
+    if ss == "":
+        return None
+    # Ensure all chars are digits 0-9
+    ok = True
+    for i in range(len(ss)):
+        ch = ss[i]
+        if ch < "0" or ch > "9":
+            ok = False
+            break
+    if not ok:
+        return None
+    v = int(ss)
+    if v <= 0:
+        return None
+    return v
+
+def _effective_threads(ctx):
+    """Resolve the effective Verilator threads setting.
+
+    Precedence:
+      1) Explicit rule attr `threads`
+      2) --define overrides: VERILATOR_THREADS / verilator_threads / THREADS
+      3) Default = 1
+    """
+    # Start with the attribute value.
+    threads = getattr(ctx.attr, "threads", 1)
+
+    # Allow --define VERILATOR_THREADS=N (aliases supported) to override when attr is default.
+    # Bazel exposes --define key=value via ctx.var with an upper-cased key usable in make variables.
+    # To be robust, we check multiple casings.
+    define_keys = ["VERILATOR_THREADS", "verilator_threads", "THREADS"]
+    for k in define_keys:
+        v = ctx.var.get(k)
+        if v != None:
+            dv = _parse_positive_int(v)
+            if dv != None:
+                threads = dv
+                break
+
+    if threads < 1:
+        threads = 1
+    return threads
+
 def _verilator_cocotb_model_impl(ctx):
     """Implementation of the verilator_cocotb_model rule."""
     cc_toolchain = ctx.toolchains["@bazel_tools//tools/cpp:toolchain_type"].cc
@@ -40,6 +91,8 @@ def _verilator_cocotb_model_impl(ctx):
 
     verilator_root = "$PWD/{}.runfiles/coralnpu_hw/external/verilator".format(ctx.executable._verilator_bin.path)
     cocotb_lib_path = "$PWD/{}".format(ctx.files._cocotb_verilator_lib[0].dirname)
+    eff_threads = _effective_threads(ctx)
+    threads_flag = "--threads {}".format(eff_threads) if eff_threads > 1 else ""
     verilator_cmd = " ".join("""
         VERILATOR_ROOT={verilator_root} {verilator} \
             -cc \
@@ -51,6 +104,7 @@ def _verilator_cocotb_model_impl(ctx):
             -o {hdl_toplevel} \
             -LDFLAGS "-Wl,-rpath {cocotb_lib_path} -L{cocotb_lib_path} -lcocotbvpi_verilator" \
             {trace} \
+            {threads_flag} \
             {cflags} \
             $PWD/{verilator_cpp} \
             {vlt_file} \
@@ -66,6 +120,7 @@ def _verilator_cocotb_model_impl(ctx):
         vlt_file = vlt_file.path,
         verilog_source = ctx.file.verilog_source.path,
         trace = "--trace" if ctx.attr.trace else "",
+        threads_flag = threads_flag,
     )
 
     make_cmd = "PATH=`dirname {ld}`:$PATH make -j $(nproc) -C {outdir} -f Vtop.mk {trace} CXX={cxx} AR={ar} LINK={cxx} > {make_log} 2>&1".format(
@@ -120,12 +175,16 @@ verilator_cocotb_model = rule(
         verilog_source: The verilog source file to build the model from.
         hdl_toplevel: The name of the toplevel module.
         cflags: A list of flags to pass to the compiler.
+        threads: Number of Verilator worker threads. If >1, passes `--threads N` to Verilator.
+          You can override this without editing BUILD via Bazel defines, e.g.:
+            --define VERILATOR_THREADS=4
     """,
     implementation = _verilator_cocotb_model_impl,
     attrs = {
         "verilog_source": attr.label(allow_single_file = True, mandatory = True),
         "hdl_toplevel": attr.string(mandatory = True),
-        "cflags": attr.string_list(default = []),
+    "cflags": attr.string_list(default = []),
+    "threads": attr.int(default = 1, doc = "Number of threads for Verilator. Override with --define VERILATOR_THREADS=N."),
         "trace": attr.bool(default = False),
         "vlt_tpl": attr.label(
             default = "@coralnpu_hw//rules:default.vlt.tpl",
