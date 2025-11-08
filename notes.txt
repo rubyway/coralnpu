@@ -1,0 +1,34 @@
+后续标准同步流程（记下来方便以后用）
+# 从上游抓更新
+git fetch upstream
+
+# 合并或重放
+git checkout main
+git merge upstream/main         # 或: git rebase upstream/main
+
+# 推送更新到自己 fork
+git push origin main
+
+如果以后创建特性分支
+git checkout -b feature/my-change
+# 修改、提交
+git push -u origin feature/my-change
+# 在 GitHub 上从 rubyway/coralnpu:feature/my-change 发起 PR 到 google-coral/coralnpu:main
+
+
+出现 403 的常见原因与对应解决
+
+直接向上游仓库推送：需要 fork。
+访问被限速：稍等再试或使用 SSH。
+token 权限不足（CLI Fork 403）：重新 gh auth refresh -h github.com -s repo 或在浏览器手动 fork。
+可选增强
+
+使用 SSH：git remote set-url origin git@github.com:rubyway/coralnpu.git
+添加自动同步脚本：
+# scripts/sync-upstream.sh
+#!/usr/bin/env bash
+set -euo pipefail
+git fetch upstream
+git checkout main
+git merge --ff-only upstream/main
+git push origin main
