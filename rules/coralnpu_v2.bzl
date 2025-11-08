@@ -156,12 +156,14 @@ def _coralnpu_v2_binary_impl(ctx):
         "-vmem",
         str(word_size),
     ]
-    ctx.actions.run(
+    # Invoke srec_cat (host tool). Emit a helpful message if it's missing.
+    ctx.actions.run_shell(
         outputs = [out_vmem],
         inputs = [out_bin],
-        executable = "srec_cat",
+        command = "set -euo pipefail; command -v srec_cat >/dev/null 2>&1 || { echo >&2 'ERROR: srec_cat not found. Install the srecord package (e.g., sudo apt-get install -y srecord) and retry.'; exit 127; }; srec_cat $@",
         arguments = srec_cat_vmem_args,
         mnemonic = "SrecCat",
+        progress_message = "Generating VMEM via srec_cat",
     )
 
     return [
@@ -189,7 +191,7 @@ _coralnpu_v2_binary = _coralnpu_v2_rule(
         "linker_script_includes": attr.label_list(default = [], allow_files = True),
         "semihosting": attr.bool(),
         "word_size": attr.int(default = 32),
-        "_cc_toolchain": attr.label(default = Label("@bazel_tools//tools/cpp:current_cc_toolchain")),
+    "_cc_toolchain": attr.label(default = Label("@bazel_tools//tools/cpp:current_cc_toolchain")),
     },
     fragments = ["cpp"],
     toolchains = ["@rules_cc//cc:toolchain_type"],

@@ -26,6 +26,17 @@ Coral NPU offers the following top-level feature set:
 
 * Bazel 6.2.1
 * Python 3.9-3.12 (3.13 support is in progress)
+* Toolchain prerequisites listed below
+
+### Host Package Prerequisites
+
+These host tools must be installed so Bazel rules (e.g. converting firmware images) succeed:
+
+| Purpose | Tool | Ubuntu (>=24.04) Install |
+|---------|------|---------------------------|
+| Binary -> VMEM conversion | srec_cat (from srecord) | `sudo apt-get install -y srecord` |
+
+If a required tool is missing, the build will now emit a clear error (for example: `'srec_cat' not found in PATH. Please install the 'srecord' package ...`). Install the package and re-run the build.
 
 ## Quick Start
 
