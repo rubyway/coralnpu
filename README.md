@@ -57,6 +57,29 @@ bazel-bin/tests/verilator_sim/core_mini_axi_sim --binary bazel-out/k8-fastbuild-
 
 ![](doc/images/Coral_Logo_200px-2x.png)
 
+## 分支合并状态检查 / Branch merge status
+
+为便捷判断某个功能分支是否已经合并进主分支（默认 `origin/main`），提供脚本 `scripts/branch_merge_status.sh`。
+
+- 退出码（Exit codes）
+	- 0：已合并/已包含（merged/included）
+	- 1：尚未合并（not merged；会列出分支独有提交）
+	- 2：错误（参数或引用不存在等）
+
+- 用法（Usage）
+```bash
+# 当前分支 vs origin/main
+scripts/branch_merge_status.sh
+
+# 指定分支
+scripts/branch_merge_status.sh my/feature
+
+# 指定基线与远端
+scripts/branch_merge_status.sh my/feature --base develop --remote upstream
+```
+
+脚本会打印分支/HEAD、远端基线 SHA、merge-base 以及具体状态（已合并/可快进/分叉）并列出双方独有提交，便于评审与发布流程判断。
+
 ## 环境快照与校验
 
 为保证可复现的构建/测试环境，本仓库提供以下两种方式：
