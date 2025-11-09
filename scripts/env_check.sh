@@ -36,11 +36,16 @@ else
   yellow "- Python3 未找到"
 fi
 
+# Track missing tools (required/optional)
+missing_required=0
+missing_optional=0
+
 # srec_cat
 if have srec_cat; then
   echo "- srec_cat: $(srec_cat --version 2>&1 | head -n1) ($(which_or srec_cat))"
 else
-  red "- 缺失: srec_cat (请安装 'srecord' 包)"
+  red "- 缺失(必需): srec_cat (请安装 'srecord' 包)"
+  missing_required=1
 fi
 
 # verilator
@@ -49,6 +54,7 @@ if have verilator; then
   echo "- Verilator: $(verilator --version 2>&1 | head -n1) ($(which_or verilator))"
 else
   yellow "- Verilator 未在 PATH (通常由 Bazel 第三方依赖/规则构建，不强制要求系统安装)"
+  missing_optional=1
 fi
 
 # gtkwave
@@ -56,6 +62,7 @@ if have gtkwave; then
   echo "- GTKWave: $(gtkwave --version 2>&1 | head -n1) ($(which_or gtkwave))"
 else
   yellow "- GTKWave 未安装 (devcontainer 已内置; 主机上可使用: sudo apt-get install -y gtkwave)"
+  missing_optional=1
 fi
 
 # Minimal build smoke test (optional)
@@ -66,6 +73,16 @@ if have bazel; then
   else
     yellow "- Bazel 查询失败（可能首次运行需下载依赖或网络受限）"
   fi
+fi
+
+if [[ "$missing_required" -ne 0 ]]; then
+  red "\n必需依赖缺失，环境检查失败。"
+  exit 1
+fi
+
+if [[ "${STRICT:-0}" -eq 1 && "$missing_optional" -ne 0 ]]; then
+  red "\n严格模式开启，存在可选依赖缺失，环境检查失败。"
+  exit 1
 fi
 
 echo "\n完成。"
