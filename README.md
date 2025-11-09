@@ -214,6 +214,30 @@ scripts/branch_merge_status.sh my/feature --base develop --remote upstream
 
 脚本会打印分支/HEAD、远端基线 SHA、merge-base 以及具体状态（已合并/可快进/分叉）并列出双方独有提交，便于评审与发布流程判断。
 
+## Git LFS 说明 / Git LFS Note
+
+当前仓库未启用 Git LFS 文件追踪：根目录没有 `.gitattributes` 中的 LFS 规则，且已移除遗留的 `pre-push` 钩子（原本要求安装 `git-lfs`）。因此推送操作无需 Git LFS 支持。
+
+如果未来需要追踪较大的二进制或波形文件（例如仿真生成的 `.fst`、模型权重等），可按以下步骤启用：
+
+```bash
+sudo apt-get update && sudo apt-get install -y git-lfs   # 安装 git-lfs（容器或主机）
+git lfs install                                          # 初始化当前用户的 LFS hooks
+git lfs track "*.fst"                                   # 示例：追踪波形文件
+git add .gitattributes
+git commit -m "chore(lfs): track fst wave dumps"
+git push origin <branch>
+```
+
+停用或撤销 LFS：
+```bash
+git lfs uninstall                 # 移除 LFS hooks（不删除已上传的 LFS 对象）
+rm .gitattributes                 # 如不再需要任何 LFS 规则
+git commit -m "chore(lfs): remove LFS tracking"
+```
+
+注意：若仅有少量、小体积的文本或源代码变更，不必启用 LFS；启用后需保证 CI 环境也具备 `git-lfs`（可在 devcontainer Dockerfile 或 CI workflow 中安装）。
+
 ## 环境快照与校验
 
 为保证可复现的构建/测试环境，本仓库提供以下两种方式：
