@@ -1,19 +1,19 @@
-
 {
-	"name": "coralnpu-dev",
-	"build": {
-		"dockerfile": "Dockerfile"
-	},
-	"customizations": {
-		"vscode": {
-			"settings": {
-				"terminal.integrated.defaultProfile.linux": "bash"
-			},
-			"extensions": [
-				"ms-vscode.cpptools",
-				"ms-python.python"
-			]
-		}
-	},
-	"postCreateCommand": "bash -lc 'echo Dev container ready'"
+  "name": "coralnpu-dev",
+  "build": {
+    "dockerfile": "Dockerfile"
+  },
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "terminal.integrated.defaultProfile.linux": "bash"
+      },
+      "extensions": [
+        "ms-vscode.cpptools",
+        "ms-python.python"
+      ]
+    }
+  },
+  "postCreateCommand": "bash -lc 'echo Dev container ready'",
+  "updateContentCommand": "bazel --version || true"
 }
