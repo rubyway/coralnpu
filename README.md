@@ -56,3 +56,28 @@ bazel-bin/tests/verilator_sim/core_mini_axi_sim --binary bazel-out/k8-fastbuild-
 
 
 ![](doc/images/Coral_Logo_200px-2x.png)
+
+## 环境快照与校验
+
+为保证可复现的构建/测试环境，本仓库提供以下两种方式：
+
+- Dev Container（推荐）：在 VS Code 中使用 `.devcontainer/` 定义的容器环境。该镜像基于 Ubuntu 24.04，并预装了构建所需系统依赖：
+	- srecord（提供 `srec_cat`）
+	- gtkwave（波形查看工具）
+
+- 主机环境：按“Host Package Prerequisites”安装缺少的包（至少 `srecord`，以及需要查看波形时的 `gtkwave`）。
+
+你可以用脚本快速检查当前环境是否满足依赖：
+
+```bash
+bash scripts/env_check.sh
+```
+
+该脚本会输出：
+
+- 期望的 Bazel 版本（来自 `.bazelversion`）与实际 `bazel --version`
+- Python3 版本
+- `srec_cat`（来自 srecord）、`verilator`、`gtkwave` 的存在性与版本/路径
+- 可选的 Bazel 工作空间快速检查
+
+如脚本提示缺少 `srec_cat`，请安装 `srecord` 包；如缺少 `gtkwave`，请安装 `gtkwave` 包或使用 Dev Container。
