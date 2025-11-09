@@ -12,6 +12,10 @@ RUN apt-get update \
         gtkwave \
         curl \
         ca-certificates \
+        python3 \
+        python3-venv \
+        python3-pip \
+        build-essential \
     # Install Bazel via Bazelisk (puts "bazel" on PATH)
     && curl -sSL -o /usr/local/bin/bazel https://github.com/bazelbuild/bazelisk/releases/download/v1.19.0/bazelisk-linux-amd64 \
     && chmod +x /usr/local/bin/bazel \
