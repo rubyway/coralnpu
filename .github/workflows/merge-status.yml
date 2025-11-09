@@ -1,0 +1,49 @@
+name: PR Merge Status
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  merge-status:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run merge status script
+        id: merge_status
+        shell: bash
+        run: |
+          set +e
+          set -o pipefail
+          chmod +x scripts/branch_merge_status.sh || true
+          BRANCH_SHA="${{ github.event.pull_request.head.sha }}"
+          BASE_BRANCH="${{ github.base_ref }}"
+          echo "Checking branch ${BRANCH_SHA} against origin/${BASE_BRANCH}"
+          scripts/branch_merge_status.sh "${BRANCH_SHA}" --base "${BASE_BRANCH}" --remote origin | tee merge_status.txt
+          CODE=$?
+          echo "code=${CODE}" >> "$GITHUB_OUTPUT"
+
+      - name: Comment merge status on PR
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require('fs');
+            const bodyRaw = fs.readFileSync('merge_status.txt', 'utf8');
+            const code = Number("${{ steps.merge_status.outputs.code }}");
+            let statusCN = '未知';
+            let statusEN = 'Unknown';
+            if (code === 0) { statusCN = '已合并/已包含'; statusEN = 'Merged/Included'; }
+            else if (code === 1) { statusCN = '尚未合并'; statusEN = 'Not merged'; }
+            else if (code === 2) { statusCN = '错误'; statusEN = 'Error'; }
+            const comment = `### 分支合并状态 / Merge Status\n- 状态(Status): **${statusCN} / ${statusEN}** (exit=${code})\n\n详情 / Details:\n\n\`\`\`\n${bodyRaw}\n\`\`\``;
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: comment,
+            });

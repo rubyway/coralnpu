@@ -190,3 +190,75 @@ bazel build //tests/cocotb:core_mini_axi_model --define VERILATOR_THREADS=4
 
 
 ![](doc/images/Coral_Logo_200px-2x.png)
+
+## 分支合并状态检查 / Branch merge status
+
+为便捷判断某个功能分支是否已经合并进主分支（默认 `origin/main`），提供脚本 `scripts/branch_merge_status.sh`。
+
+- 退出码（Exit codes）
+	- 0：已合并/已包含（merged/included）
+	- 1：尚未合并（not merged；会列出分支独有提交）
+	- 2：错误（参数或引用不存在等）
+
+- 用法（Usage）
+```bash
+# 当前分支 vs origin/main
+scripts/branch_merge_status.sh
+
+# 指定分支
+scripts/branch_merge_status.sh my/feature
+
+# 指定基线与远端
+scripts/branch_merge_status.sh my/feature --base develop --remote upstream
+```
+
+脚本会打印分支/HEAD、远端基线 SHA、merge-base 以及具体状态（已合并/可快进/分叉）并列出双方独有提交，便于评审与发布流程判断。
+
+## Git LFS 说明 / Git LFS Note
+
+当前仓库未启用 Git LFS 文件追踪：根目录没有 `.gitattributes` 中的 LFS 规则，且已移除遗留的 `pre-push` 钩子（原本要求安装 `git-lfs`）。因此推送操作无需 Git LFS 支持。
+
+如果未来需要追踪较大的二进制或波形文件（例如仿真生成的 `.fst`、模型权重等），可按以下步骤启用：
+
+```bash
+sudo apt-get update && sudo apt-get install -y git-lfs   # 安装 git-lfs（容器或主机）
+git lfs install                                          # 初始化当前用户的 LFS hooks
+git lfs track "*.fst"                                   # 示例：追踪波形文件
+git add .gitattributes
+git commit -m "chore(lfs): track fst wave dumps"
+git push origin <branch>
+```
+
+停用或撤销 LFS：
+```bash
+git lfs uninstall                 # 移除 LFS hooks（不删除已上传的 LFS 对象）
+rm .gitattributes                 # 如不再需要任何 LFS 规则
+git commit -m "chore(lfs): remove LFS tracking"
+```
+
+注意：若仅有少量、小体积的文本或源代码变更，不必启用 LFS；启用后需保证 CI 环境也具备 `git-lfs`（可在 devcontainer Dockerfile 或 CI workflow 中安装）。
+
+## 环境快照与校验
+
+为保证可复现的构建/测试环境，本仓库提供以下两种方式：
+
+- Dev Container（推荐）：在 VS Code 中使用 `.devcontainer/` 定义的容器环境。该镜像基于 Ubuntu 24.04，并预装了构建所需系统依赖：
+	- srecord（提供 `srec_cat`）
+	- gtkwave（波形查看工具）
+
+- 主机环境：按“Host Package Prerequisites”安装缺少的包（至少 `srecord`，以及需要查看波形时的 `gtkwave`）。
+
+你可以用脚本快速检查当前环境是否满足依赖：
+
+```bash
+bash scripts/env_check.sh
+```
+
+该脚本会输出：
+
+- 期望的 Bazel 版本（来自 `.bazelversion`）与实际 `bazel --version`
+- Python3 版本
+- `srec_cat`（来自 srecord）、`verilator`、`gtkwave` 的存在性与版本/路径
+- 可选的 Bazel 工作空间快速检查
+
+如脚本提示缺少 `srec_cat`，请安装 `srecord` 包；如缺少 `gtkwave`，请安装 `gtkwave` 包或使用 Dev Container。

@@ -1,0 +1,10 @@
+diff --git a/.devcontainer/Dockerfile b/.devcontainer/Dockerfile
+new file mode 100644
+index 0000000..e69de29
+diff --git a/.devcontainer/devcontainer.json b/.devcontainer/devcontainer.json
+index 76edfa6..e69de29 100644
+--- a/.devcontainer/devcontainer.json
++++ b/.devcontainer/devcontainer.json
+@@ -1 +0,0 @@
+-{"image":"mcr.microsoft.com/devcontainers/universal:2"}
+\ No newline at end of file

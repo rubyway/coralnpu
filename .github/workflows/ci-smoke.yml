@@ -1,0 +1,40 @@
+name: CI Smoke
+
+on:
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Bazelisk as bazel
+        shell: bash
+        run: |
+          set -euxo pipefail
+          BZLISK_VER=v1.19.0
+          curl -sSL -o bazelisk \
+            https://github.com/bazelbuild/bazelisk/releases/download/${BZLISK_VER}/bazelisk-linux-amd64
+          chmod +x bazelisk
+          sudo mv bazelisk /usr/local/bin/bazel
+          bazel --version || true
+
+      - name: Install system packages
+        shell: bash
+        run: |
+          set -euxo pipefail
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            srecord \
+          && sudo rm -rf /var/lib/apt/lists/*
+
+      - name: Run smoke checks
+        shell: bash
+        run: |
+          set -euxo pipefail
+          chmod +x scripts/env_check.sh scripts/ci_smoke.sh || true
+          bash scripts/ci_smoke.sh
