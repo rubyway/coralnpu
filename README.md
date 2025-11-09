@@ -9,6 +9,107 @@ Coral NPU includes three distinct processor components that work together: matri
 ![Coral NPU Archicture](doc/images/arch_overview_alpha.png)
 [Coral NPU Architecture Datasheet](https://developers.google.com/coral/guides/hardware/datasheet)
 
+## 开发容器（Dev Container / Codespaces）环境说明
+
+本仓库提供 `.devcontainer/` 目录以在 VS Code Dev Containers 与 GitHub Codespaces 中获得可复现的 Ubuntu 24.04 开发环境，自动满足 Bazel + Verilator + cocotb 的基础依赖。若看到 Codespaces 进入 *Recovery* 模式（日志出现 `Creating recovery container` 并拉取 `base:alpine`），通常是 `devcontainer.json` 解析失败（例如遗留冲突标记）或 Dockerfile 构建阶段错误。
+
+### 组成
+`devcontainer.json` 指定使用本目录的 `Dockerfile` 构建镜像，并在创建后运行:
+
+* 安装系统包：`srecord`、`gtkwave`、`curl`、`ca-certificates`、`python3`、`python3-pip`、`python3-venv`、`build-essential`
+* 安装 Bazelisk 到 `/usr/local/bin/bazel`（根据 `.bazelversion` 自动选择 Bazel 版本）
+* 执行 `postCreateCommand` 输出简单提示。
+
+### 首次使用 / 重建
+1. 打开仓库于 VS Code 或 GitHub Codespaces。
+2. 若曾出现恢复模式：修复 `.devcontainer/devcontainer.json` 后执行命令面板 `Codespaces: Rebuild Container`（或 `Dev Containers: Rebuild Container` 本地环境）。
+3. 重建完成后验证：
+	 ```bash
+	 cat /etc/os-release | grep PRETTY_NAME          # 期望: Ubuntu 24.04
+	 which bazel && bazel --version                 # 期望: Bazelisk 注入的 bazel 6.2.1 (或 .bazelversion 对应版本)
+	 python3 --version                              # 期望: Python >= 3.12
+	 srec_cat --version || which srec_cat           # 来自 srecord 包
+	 verilator --version                            # 若需要手动验证（rules 会自动获取）
+	 ```
+
+### 常见故障与修复
+| 症状 | 可能原因 | 修复 |
+|------|----------|------|
+| Recovery 容器是 Alpine 而非 Ubuntu | `devcontainer.json` 语法出错或构建失败 | 修复 JSON → Rebuild Container |
+| `python3: No such file or directory` | 基础镜像未安装 Python（旧配置） | 更新 Dockerfile（已完成）并重建 |
+| Bazel 命令找不到 | Bazelisk 未成功下载（网络临时故障） | 重建容器或手动 `curl` 重新放置 bazelisk |
+| 构建 Verilator cocotb 时报缺工具 | 缺失 `python3` / `srec_cat` / 编译工具链 | 确认 Dockerfile 已安装，对主机模式手动安装 |
+| Verilator 单线程运行慢 | 未传递线程数 | 使用 `--define VERILATOR_THREADS=4` 或在 BUILD 中设置 `threads` 属性 |
+
+### 性能与缓存建议
+对于较大的硬件/仿真构建，可启用持久化 Bazel 缓存卷（Dev Containers 支持）：在 `devcontainer.json` 中追加：
+```jsonc
+"mounts": [
+	"source=bazel-cache,target=/home/vscode/.cache/bazel,type=volume"
+]
+```
+这样重建容器后仍可复用编译缓存。可根据需要再增加 `ccache` 或 Verilator 生成目录卷。
+
+### 线程与并行
+Verilator 线程数可在不修改 BUILD 的情况下通过 Bazel define：
+```bash
+bazel build //tests/cocotb:core_mini_axi_model --define VERILATOR_THREADS=4
+```
+内部规则会自动解析 `VERILATOR_THREADS` / `verilator_threads` / `THREADS`。
+
+### 快速健康检查脚本
+执行 `bash scripts/env_check.sh` 查看：
+* Bazel 版本与预期是否一致
+* Python / Verilator / srec_cat 是否在 PATH 中
+* 波形工具 `gtkwave` 可用性
+
+### 定制与扩展
+若需要额外工具（例如 `git-lfs`、`clang-format`、`openjdk`）：
+1. 在 Dockerfile 中添加 `apt-get install` 包。
+2. 或在 `devcontainer.json` 增加 `updateContentCommand` 安装（适合轻量、不需镜像层缓存的东西）。
+3. 推送分支后执行 Rebuild 以验证新依赖是否正确安装。
+
+### 迁移到主机环境
+在非容器（裸机）下复现环境：
+```bash
+sudo apt-get update
+sudo apt-get install -y srecord gtkwave python3 python3-pip build-essential curl ca-certificates
+curl -fsSL -o /usr/local/bin/bazel https://github.com/bazelbuild/bazelisk/releases/download/v1.19.0/bazelisk-linux-amd64
+chmod +x /usr/local/bin/bazel
+bazel --version
+```
+确保与 `.bazelversion` 文件一致。
+
+### 常见版本定位
+| 组件 | 来源 | 当前配置 | 备注 |
+|------|------|----------|------|
+| Ubuntu Base | `Dockerfile` | 24.04 | Recovery 模式才会是 Alpine |
+| Bazel | Bazelisk + `.bazelversion` | 6.2.1 | 自动跟随仓库版本文件 |
+| Python | apt | 3.12.x | 兼容 cocotb/Verilator 脚本 |
+| srecord | apt | 最新发行版 | 提供 `srec_cat` 工具 |
+| gtkwave | apt | 最新发行版 | 波形查看（可选） |
+
+### 典型调试步骤示例
+```bash
+# 1. Rebuild container 后初始验证
+cat /etc/os-release | grep PRETTY_NAME
+which bazel && bazel --version
+python3 --version
+
+# 2. 构建并运行 cocotb 教程测试
+bazel run //tests/cocotb/tutorial:tutorial --test_output=errors
+
+# 3. 查看 Verilator 线程使用情况（make 日志）
+grep -i threads tests/cocotb/CoreMiniAxi_build/make.log || echo "Threads flag not set"
+
+# 4. 调优：增加线程与缓存卷后再构建
+bazel clean --expunge
+bazel build //tests/cocotb:core_mini_axi_model --define VERILATOR_THREADS=4
+```
+
+若出现任何与容器解析相关的报错，先检查 `devcontainer.json` 是否存在残留冲突标记（`<<<<<<<` / `=======` / `>>>>>>>`），再执行重建。
+
+
 ## Coral NPU Features
 Coral NPU offers the following top-level feature set:
 
