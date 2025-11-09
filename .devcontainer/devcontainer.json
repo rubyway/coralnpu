@@ -1,5 +1,4 @@
-<<<<<<< HEAD
-=======
+
 {
 	"name": "coralnpu-dev",
 	"build": {
@@ -18,4 +17,3 @@
 	},
 	"postCreateCommand": "bash -lc 'echo Dev container ready'"
 }
->>>>>>> origin/main
